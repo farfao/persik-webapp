@@ -298,12 +298,21 @@
                 const ctx = canvas.getContext('2d');
                 ctx.drawImage(video, 0, 0);
                 
-                // OCR с Tesseract
+                // Улучшаем качество изображения для OCR
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const processedData = enhanceImageForOCR(imageData);
+                ctx.putImageData(processedData, 0, 0);
+                
+                // OCR с Tesseract с улучшенными настройками
                 const result = await Tesseract.recognize(
                     canvas, 
                     'eng+rus',  // Русский и английский
                     {
                         logger: m => console.log(m),
+                        tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789,-. ',
+                        tessedit_pagesegmode: Tesseract.PSM.SINGLE_BLOCK, // Распознавание как блок текста
+                        preserve_interword_spaces: '1',
+                        tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY
                     }
                 );
                 
@@ -328,6 +337,31 @@
             }
         }
         
+        // Функция улучшения изображения для OCR
+        function enhanceImageForOCR(imageData) {
+            const data = imageData.data;
+            const width = imageData.width;
+            const height = imageData.height;
+            
+            // Конвертируем в grayscale
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+                data[i] = gray;
+                data[i + 1] = gray;
+                data[i + 2] = gray;
+            }
+            
+            // Увеличиваем контрастность
+            const factor = 1.5;
+            for (let i = 0; i < data.length; i += 4) {
+                data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));
+                data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128));
+                data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128));
+            }
+            
+            return imageData;
+        }
+        
         // Фильтрация состава (извлечение INCI)
         function filterIngredients(text) {
             // Ищем начало списка ингредиентов
@@ -336,9 +370,9 @@
             
             for (let i = 0; i < lines.length; i++) {
                 const line = lines[i].toLowerCase();
-                if (line.includes('ingredients:') || 
+                if (line.includes('ингредиенты:') || 
                     line.includes('состав:') || 
-                    line.includes('incI:') ||
+                    line.includes('inci:') ||
                     line.includes('aqua') ||
                     line.includes('water')) {
                     ingredientsStart = i;
