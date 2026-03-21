@@ -249,19 +249,29 @@
         let allScannedTexts = []; // Массив для всех сканирований
         
         // Инициализация Telegram Web App
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand();
+        console.log("🔧 Начинаем инициализацию Telegram Web App...");
+        console.log("🔧 Доступен ли Telegram:", typeof Telegram !== 'undefined');
+        console.log("🔧 Доступен ли Telegram.WebApp:", typeof Telegram?.WebApp);
         
-        console.log("🔧 Telegram WebApp инициализирован:", tg);
-        console.log("🔧 WebApp готов:", tg.isReady);
-        console.log("🔧 Пользователь:", tg.initDataUnsafe?.user);
-        
-        // Показываем статус инициализации
-        if (tg.isReady) {
-            showStatus("✅ Telegram WebApp готов к работе!", "success");
+        if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+            console.log("🔧 Создаем WebApp инстанс...");
+            const tg = Telegram.WebApp;
+            tg.ready();
+            tg.expand();
+            
+            console.log("🔧 Telegram WebApp инициализирован:", tg);
+            console.log("🔧 WebApp готов:", tg.isReady);
+            console.log("🔧 Пользователь:", tg.initDataUnsafe?.user);
+            
+            // Показываем статус инициализации
+            if (tg.isReady) {
+                showStatus("✅ Telegram WebApp готов к работе!", "success");
+            } else {
+                showStatus("❌ Telegram WebApp не инициализирован", "error");
+            }
         } else {
-            showStatus("❌ Telegram WebApp не инициализирован", "error");
+            console.error("🔧 Telegram WebApp API недоступен!");
+            showStatus("❌ Telegram API недоступен", "error");
         }
         
         // Показываем статус
@@ -475,6 +485,7 @@
                     console.log("Отправляем JSON:", JSON.stringify(data));
                     
                     if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+                        console.log("Telegram WebApp API доступен");
                         Telegram.WebApp.sendData(JSON.stringify(data));
                         showStatus('✅ Состав отправлен на анализ!', 'success');
                         
