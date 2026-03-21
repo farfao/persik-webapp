@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Персик Premium - Сканирование состава</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            color: white;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.8;
+            font-size: 14px;
+        }
+        
+        .camera-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 15px;
+            overflow: hidden;
+            margin-bottom: 20px;
+        }
+        
+        #video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.7);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .scan-overlay.active {
+            opacity: 1;
+        }
+        
+        .scan-icon {
+            font-size: 48px;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            backdrop-filter: blur(10px);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+        
+        .result-container {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            display: none;
+        }
+        
+        .result-container.show {
+            display: block;
+        }
+        
+        .result-text {
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .status {
+            text-align: center;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        
+        .status.scanning {
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.5);
+        }
+        
+        .status.success {
+            background: rgba(34, 197, 94, 0.2);
+            border: 1px solid rgba(34, 197, 94, 0.5);
+        }
+        
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-right: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🍑 Персик Premium</h1>
+            <p>Наведи камеру на состав и нажми "Сканировать"</p>
+        </div>
+        
+        <div class="camera-container">
+            <video id="video" autoplay playsinline></video>
+            <div class="scan-overlay" id="scanOverlay">
+                <div class="scan-icon">📸</div>
+            </div>
+        </div>
+        
+        <div id="status" class="status hidden"></div>
+        
+        <div class="controls">
+            <button id="startBtn" class="btn btn-primary">📸 Начать сканирование</button>
+            <button id="scanBtn" class="btn btn-primary hidden">📸 Сканировать состав</button>
+            <button id="sendBtn" class="btn btn-secondary hidden">📤 Отправить состав</button>
+        </div>
+        
+        <div id="resultContainer" class="result-container">
+            <div class="result-text" id="resultText"></div>
+        </div>
+    </div>
+
+    <script>
+        let video = document.getElementById('video');
+        let scanOverlay = document.getElementById('scanOverlay');
+        let startBtn = document.getElementById('startBtn');
+        let scanBtn = document.getElementById('scanBtn');
+        let sendBtn = document.getElementById('sendBtn');
+        let status = document.getElementById('status');
+        let resultContainer = document.getElementById('resultContainer');
+        let resultText = document.getElementById('resultText');
+        
+        let stream = null;
+        let recognizedText = '';
+        
+        // Инициализация Telegram Web App
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+        
+        // Показываем статус
+        function showStatus(message, type = 'scanning') {
+            status.className = `status ${type}`;
+            status.innerHTML = message;
+            status.classList.remove('hidden');
+        }
+        
+        // Скрываем статус
+        function hideStatus() {
+            status.classList.add('hidden');
+        }
+        
+        // Запуск камеры
+        async function startCamera() {
+            try {
+                showStatus('<div class="loading"></div> Запускаем камеру...', 'scanning');
+                
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 960 }
+                    }
+                });
+                
+                video.srcObject = stream;
+                
+                hideStatus();
+                startBtn.classList.add('hidden');
+                scanBtn.classList.remove('hidden');
+                
+            } catch (error) {
+                console.error('Ошибка камеры:', error);
+                showStatus('❌ Не удалось получить доступ к камере. Проверьте разрешения.', 'error');
+            }
+        }
+        
+        // Сканирование через OCR
+        async function scanIngredients() {
+            try {
+                scanOverlay.classList.add('active');
+                showStatus('<div class="loading"></div> Сканируем состав...', 'scanning');
+                
+                // Создаем canvas для захвата кадра
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                
+                // OCR с Tesseract
+                const result = await Tesseract.recognize(
+                    canvas, 
+                    'eng+rus',  // Русский и английский
+                    {
+                        logger: m => console.log(m),
+                    }
+                );
+                
+                scanOverlay.classList.remove('active');
+                
+                if (result.data.text.trim()) {
+                    recognizedText = filterIngredients(result.data.text);
+                    resultText.textContent = recognizedText;
+                    resultContainer.classList.add('show');
+                    sendBtn.classList.remove('hidden');
+                    scanBtn.classList.add('hidden');
+                    
+                    showStatus('✅ Состав распознан!', 'success');
+                } else {
+                    showStatus('❌ Не удалось распознать состав. Попробуйте еще раз.', 'error');
+                }
+                
+            } catch (error) {
+                console.error('Ошибка OCR:', error);
+                scanOverlay.classList.remove('active');
+                showStatus('❌ Ошибка распознавания. Попробуйте еще раз.', 'error');
+            }
+        }
+        
+        // Фильтрация состава (извлечение INCI)
+        function filterIngredients(text) {
+            // Ищем начало списка ингредиентов
+            const lines = text.split('\n');
+            let ingredientsStart = -1;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].toLowerCase();
+                if (line.includes('ingredients:') || 
+                    line.includes('состав:') || 
+                    line.includes('incI:') ||
+                    line.includes('aqua') ||
+                    line.includes('water')) {
+                    ingredientsStart = i;
+                    break;
+                }
+            }
+            
+            // Если нашли начало, берем оттуда
+            if (ingredientsStart >= 0) {
+                const ingredientsLines = lines.slice(ingredientsStart);
+                return ingredientsLines.join('\n')
+                    .replace(/.*(ingredients|состав|inci):/i, '')  // Убираем заголовки
+                    .replace(/[^a-zA-Z0-9,\s.-]/g, '')  // Убираем лишние символы
+                    .replace(/\s+/g, ' ')  // Нормализуем пробелы
+                    .trim();
+            }
+            
+            // Если не нашли, возвращаем очищенный текст
+            return text
+                .replace(/[^a-zA-Z0-9,\s.-]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+        
+        // Отправка в бота
+        function sendToBot() {
+            if (recognizedText.trim()) {
+                tg.sendData(JSON.stringify({
+                    action: 'scan_ingredients',
+                    ingredients: recognizedText
+                }));
+                
+                showStatus('✅ Состав отправлен на анализ!', 'success');
+                
+                // Закрываем Web App через 2 секунды
+                setTimeout(() => {
+                    tg.close();
+                }, 2000);
+            }
+        }
+        
+        // Обработчики событий
+        startBtn.addEventListener('click', startCamera);
+        scanBtn.addEventListener('click', scanIngredients);
+        sendBtn.addEventListener('click', sendToBot);
+        
+        // Остановка камеры при закрытии
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+        
+        // Инициализация Tesseract
+        console.log('Загрузка Tesseract...');
+        Tesseract.setLogging(true);
+    </script>
+</body>
+</html>
