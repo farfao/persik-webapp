@@ -222,6 +222,7 @@
         <div class="controls">
             <button id="startBtn" class="btn btn-primary">📸 Начать сканирование</button>
             <button id="scanBtn" class="btn btn-primary hidden">📸 Сканировать состав</button>
+            <button id="continueBtn" class="btn btn-secondary hidden">🔄 Продолжить сканирование</button>
             <button id="sendBtn" class="btn btn-secondary hidden">📤 Отправить состав</button>
         </div>
         
@@ -235,6 +236,7 @@
         let scanOverlay = document.getElementById('scanOverlay');
         let startBtn = document.getElementById('startBtn');
         let scanBtn = document.getElementById('scanBtn');
+        let continueBtn = document.getElementById('continueBtn');
         let sendBtn = document.getElementById('sendBtn');
         let status = document.getElementById('status');
         let resultContainer = document.getElementById('resultContainer');
@@ -242,6 +244,7 @@
         
         let stream = null;
         let recognizedText = '';
+        let allScannedTexts = []; // Массив для всех сканирований
         
         // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
@@ -310,7 +313,7 @@
                     {
                         logger: m => console.log(m),
                         tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789,-. ',
-                        tessedit_pagesegmode: Tesseract.PSM.SINGLE_BLOCK, // Распознавание как блок текста
+                        tessedit_pagesegmode: Tesseract.PSM.SINGLE_BLOCK,
                         preserve_interword_spaces: '1',
                         tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY
                     }
@@ -319,13 +322,23 @@
                 scanOverlay.classList.remove('active');
                 
                 if (result.data.text.trim()) {
-                    recognizedText = filterIngredients(result.data.text);
+                    const scannedText = filterIngredients(result.data.text);
+                    
+                    // Добавляем новый текст к массиву
+                    allScannedTexts.push(scannedText);
+                    
+                    // Объединяем все сканированные тексты
+                    recognizedText = mergeScannedTexts(allScannedTexts);
+                    
                     resultText.textContent = recognizedText;
                     resultContainer.classList.add('show');
-                    sendBtn.classList.remove('hidden');
-                    scanBtn.classList.add('hidden');
                     
-                    showStatus('✅ Состав распознан!', 'success');
+                    // Показываем кнопки для продолжения или отправки
+                    scanBtn.classList.add('hidden');
+                    continueBtn.classList.remove('hidden');
+                    sendBtn.classList.remove('hidden');
+                    
+                    showStatus(`✅ Сканирование ${allScannedTexts.length} завершено! Можно продолжить или отправить.`, 'success');
                 } else {
                     showStatus('❌ Не удалось распознать состав. Попробуйте еще раз.', 'error');
                 }
@@ -335,6 +348,18 @@
                 scanOverlay.classList.remove('active');
                 showStatus('❌ Ошибка распознавания. Попробуйте еще раз.', 'error');
             }
+        }
+        
+        // Объединение всех сканированных текстов
+        function mergeScannedTexts(texts) {
+            const uniqueWords = new Set();
+            
+            texts.forEach(text => {
+                const words = text.split(',').map(word => word.trim()).filter(word => word.length > 2);
+                words.forEach(word => uniqueWords.add(word));
+            });
+            
+            return Array.from(uniqueWords).join(', ');
         }
         
         // Функция улучшения изображения для OCR
@@ -417,6 +442,11 @@
         // Обработчики событий
         startBtn.addEventListener('click', startCamera);
         scanBtn.addEventListener('click', scanIngredients);
+        continueBtn.addEventListener('click', () => {
+            scanBtn.classList.remove('hidden');
+            continueBtn.classList.add('hidden');
+            showStatus('🔄 Наведите на следующую часть состава и сканируйте', 'scanning');
+        });
         sendBtn.addEventListener('click', sendToBot);
         
         // Остановка камеры при закрытии
