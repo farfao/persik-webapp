@@ -223,6 +223,7 @@
             <button id="startBtn" class="btn btn-primary">📸 Начать сканирование</button>
             <button id="scanBtn" class="btn btn-primary hidden">📸 Сканировать состав</button>
             <button id="continueBtn" class="btn btn-secondary hidden">🔄 Продолжить сканирование</button>
+            <button id="testBtn" class="btn btn-secondary">🧪 Тест отправки</button>
             <button id="sendBtn" class="btn btn-secondary hidden">📤 Отправить состав</button>
         </div>
         
@@ -237,6 +238,7 @@
         let startBtn = document.getElementById('startBtn');
         let scanBtn = document.getElementById('scanBtn');
         let continueBtn = document.getElementById('continueBtn');
+        let testBtn = document.getElementById('testBtn');
         let sendBtn = document.getElementById('sendBtn');
         let status = document.getElementById('status');
         let resultContainer = document.getElementById('resultContainer');
@@ -422,20 +424,63 @@
                 .trim();
         }
         
+        // Тестовая функция отправки
+        function testSend() {
+            try {
+                console.log("🧪 Тест отправки данных...");
+                
+                const testData = {
+                    action: 'scan_ingredients',
+                    ingredients: 'Aqua, Glycerin, Niacinamide, Panthenol'
+                };
+                
+                console.log("🧪 Отправляем тестовые данные:", JSON.stringify(testData));
+                
+                if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+                    console.log("🧪 Telegram WebApp API доступен");
+                    Telegram.WebApp.sendData(JSON.stringify(testData));
+                    showStatus('🧪 Тестовые данные отправлены!', 'success');
+                } else {
+                    console.error("🧪 Telegram WebApp API недоступен");
+                    showStatus('❌ Telegram API недоступен', 'error');
+                }
+            } catch (error) {
+                console.error("🧪 Ошибка теста:", error);
+                showStatus('❌ Ошибка теста', 'error');
+            }
+        }
+        
         // Отправка в бота
         function sendToBot() {
-            if (recognizedText.trim()) {
-                tg.sendData(JSON.stringify({
-                    action: 'scan_ingredients',
-                    ingredients: recognizedText
-                }));
-                
-                showStatus('✅ Состав отправлен на анализ!', 'success');
-                
-                // Закрываем Web App через 2 секунды
-                setTimeout(() => {
-                    tg.close();
-                }, 2000);
+            try {
+                if (recognizedText.trim()) {
+                    console.log("Отправляем данные:", recognizedText);
+                    
+                    const data = {
+                        action: 'scan_ingredients',
+                        ingredients: recognizedText
+                    };
+                    
+                    console.log("Отправляем JSON:", JSON.stringify(data));
+                    
+                    if (typeof Telegram !== 'undefined' && Telegram.WebApp) {
+                        Telegram.WebApp.sendData(JSON.stringify(data));
+                        showStatus('✅ Состав отправлен на анализ!', 'success');
+                        
+                        // Закрываем Web App через 2 секунды
+                        setTimeout(() => {
+                            Telegram.WebApp.close();
+                        }, 2000);
+                    } else {
+                        console.error("Telegram WebApp API недоступен");
+                        showStatus('❌ Ошибка: Telegram API недоступен', 'error');
+                    }
+                } else {
+                    showStatus('❌ Нет распознанного состава', 'error');
+                }
+            } catch (error) {
+                console.error("Ошибка отправки:", error);
+                showStatus('❌ Ошибка отправки данных', 'error');
             }
         }
         
@@ -447,6 +492,7 @@
             continueBtn.classList.add('hidden');
             showStatus('🔄 Наведите на следующую часть состава и сканируйте', 'scanning');
         });
+        testBtn.addEventListener('click', testSend);
         sendBtn.addEventListener('click', sendToBot);
         
         // Остановка камеры при закрытии
