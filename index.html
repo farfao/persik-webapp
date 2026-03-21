@@ -253,6 +253,17 @@
         tg.ready();
         tg.expand();
         
+        console.log("🔧 Telegram WebApp инициализирован:", tg);
+        console.log("🔧 WebApp готов:", tg.isReady);
+        console.log("🔧 Пользователь:", tg.initDataUnsafe?.user);
+        
+        // Показываем статус инициализации
+        if (tg.isReady) {
+            showStatus("✅ Telegram WebApp готов к работе!", "success");
+        } else {
+            showStatus("❌ Telegram WebApp не инициализирован", "error");
+        }
+        
         // Показываем статус
         function showStatus(message, type = 'scanning') {
             status.className = `status ${type}`;
