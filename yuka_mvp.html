@@ -257,21 +257,51 @@
             try {
                 updateStatus('📷 Включение камеры...', 'scanning');
                 
-                stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: 'environment' },
-                    audio: false 
-                });
+                // Проверяем поддержку
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    throw new Error('Камера не поддерживается');
+                }
+                
+                // Запрашиваем права на камеру
+                const constraints = {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    },
+                    audio: false
+                };
+                
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                if (!stream) {
+                    throw new Error('Не удалось получить доступ к камере');
+                }
                 
                 video.srcObject = stream;
                 
-                startCameraBtn.style.display = 'none';
-                startScanBtn.style.display = 'block';
-                
-                updateStatus('📸 Камера включена. Нажмите "Начать сканирование"', 'found');
+                // Ждем загрузки видео
+                video.onloadedmetadata = () => {
+                    video.play();
+                    startCameraBtn.style.display = 'none';
+                    startScanBtn.style.display = 'block';
+                    updateStatus('📸 Камера включена. Нажмите "Начать сканирование"', 'found');
+                };
                 
             } catch (error) {
                 console.error('Ошибка камеры:', error);
-                updateStatus('❌ Не удалось включить камеру', 'error');
+                
+                if (error.name === 'NotAllowedError') {
+                    updateStatus('❌ Доступ к камере запрещен. Разрешите в настройках браузера', 'error');
+                } else if (error.name === 'NotFoundError') {
+                    updateStatus('❌ Камера не найдена', 'error');
+                } else if (error.name === 'NotSupportedError') {
+                    updateStatus('❌ Камера не поддерживается', 'error');
+                } else {
+                    updateStatus('❌ Ошибка камеры: ' + error.message, 'error');
+                }
+                
+                // Показываем альтернативу
                 showFileInput();
             }
         }
