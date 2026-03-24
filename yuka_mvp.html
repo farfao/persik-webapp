@@ -348,8 +348,8 @@
             
             updateStatus('🔍 Сканирование...', 'scanning');
             
-            // Начинаем сканирование каждые 1000мс
-            scanInterval = setInterval(scanFrame, 1000);
+            // Начинаем сканирование каждые 3000мс (увеличили для стабильности)
+            scanInterval = setInterval(scanFrame, 3000);
         }
 
         function stopScanning() {
@@ -377,8 +377,10 @@
                 scanCount++;
                 updateStats();
                 
-                // OCR распознавание
+                // OCR распознавание с улучшенными параметрами
                 const imageData = canvas.toDataURL('image/jpeg', 0.8);
+                
+                console.log('🔍 Начинаем OCR...');
                 
                 const result = await Tesseract.recognize(imageData, 'eng+rus', {
                     logger: (m) => {
@@ -386,16 +388,31 @@
                             const progress = Math.round(m.progress * 100);
                             if (progress % 25 === 0) {
                                 console.log(`OCR прогресс: ${progress}%`);
+                                updateStatus(`🔍 Распознавание... ${progress}%`, 'scanning');
                             }
                         }
-                    }
+                    },
+                    tessedit_ocr_engine_mode: '1', // LSTM
+                    tessedit_pageseg_mode: '6', // Sparse text
+                    preserve_interword_spaces: '1'
                 });
                 
+                console.log('📝 Результат OCR:', result.data.text);
+                console.log('📝 Найдено слов:', result.data.words.length);
+                
                 // Обрабатываем распознанные слова
-                handleWords(result.data.words);
+                if (result.data.words && result.data.words.length > 0) {
+                    handleWords(result.data.words);
+                } else {
+                    console.log('⚠️ Слова не найдены');
+                }
                 
             } catch (error) {
-                console.error('Ошибка сканирования:', error);
+                console.error('❌ Ошибка сканирования:', error);
+                updateStatus('❌ Ошибка распознавания', 'error');
+                
+                // Останавливаем сканирование при ошибке
+                stopScanning();
             }
         }
 
@@ -442,28 +459,78 @@
         }
 
         function isIngredient(word) {
-            if (word.length < 3) return false;
+            if (!word || word.length < 2) return false;
             if (word.length > 30) return false;
             
             // Исключаем цифры и короткие слова
             if (/^\d+$/.test(word)) return false;
             
-            // Базовые фильтры
-            const excludeWords = ['THE', 'AND', 'FOR', 'WITH', 'INGREDIENTS', 'AQUA', 'WATER'];
+            // Исключаем общие слова
+            const excludeWords = [
+                'THE', 'AND', 'FOR', 'WITH', 'INGREDIENTS', 'AQUA', 'WATER', 
+                'PRODUCT', 'CONTAINS', 'ACTIVE', 'NATURAL', 'ORGANIC',
+                'ML', 'OZ', 'G', 'KG', 'L', 'FL', 'OZ'
+            ];
             if (excludeWords.includes(word)) return false;
             
-            // Химические паттерны
+            // Расширенные химические паттерны
             const chemicalPatterns = [
                 /^[A-Z]+[0-9]*$/,  // ACID, VITAMIN C, etc
-                /^[A-Z]+-+[A-Z0-9]+$/, // COENZYME Q10
-                /^[A-Z]+.*OL$/, // ALCOHOL, PHENOL
-                /^[A-Z]+.*IC$/, // ACID, BASIC
-                /^[A-Z]+.*YL$/, // METHYL, ETHYL
-                /^[A-Z]+.*OXIDE$/, // ZINC OXIDE
-                /^[A-Z]+.*LATE$/, // SILICONE
+                /^[A-Z]+-+[A-Z0-9]+$/, // COENZYME Q10, BETA-CAROTENE
+                /^[A-Z]+.*OL$/, // ALCOHOL, PHENOL, RETINOL
+                /^[A-Z]+.*IC$/, // ACID, BASIC, HYDROXY
+                /^[A-Z]+.*YL$/, // METHYL, ETHYL, PROPYL
+                /^[A-Z]+.*OXIDE$/, // ZINC OXIDE, TITANIUM DIOXIDE
+                /^[A-Z]+.*LATE$/, // SILICONE, DIMETHICONE
+                /^[A-Z]+.*ONE$/, // CETONE, ACETONE
+                /^[A-Z]+.*ANE$/, // METHANE, ETHANE
+                /^[A-Z]+.*ENE$/, // PROPENE, BUTENE
+                /^[A-Z]+.*IN$/, // TOCOPHERIN, RETININ
+                /^[A-Z]+.*IDE$/, // AMIDE, CHLORIDE
+                /^[A-Z]+.*ATE$/, // CITRATE, LACTATE
+                /^[A-Z]+.*UM$/, // GUM, POLYSACCHARIDUM
+                /^[A-Z]+.*US$/, // POLYSACCHARUS
+                /^[A-Z]+.*EXTRACT$/, // GREEN TEA EXTRACT
+                /^[A-Z]+.*OIL$/, // COCONUT OIL, OLIVE OIL
+                /^[A-Z]+.*BUTTER$/, // SHEA BUTTER
+                /^[A-Z]+.*WAX$/, // BEESWAX, CARNAUBA WAX
+                /^[A-Z]+.*ACID$/, // SALICYLIC ACID, HYALURONIC ACID
+                /^[A-Z]+.*SULFATE$/, // SODIUM LAURYL SULFATE
+                /^[A-Z]+.*PARABEN$/, // METHYLPARABEN, PROPYLPARABEN
+                /^[A-Z]+.*GLUCOSIDE$/, // DECYL GLUCOSIDE
+                /^[A-Z]+.*CERAMIDE$/, // CERAMIDE NP, CERAMIDE AP
+                /^[A-Z]+.*PEPTIDE$/, // COPPER PEPTIDE, MATRIXYL
+                /^[A-Z]+.*ANTHOXANTHIN$/, // ZEAXANTHIN, LUTEIN
+                /^[A-Z]+.*FLAVONOID$/, // QUERCETIN, KAEMPFEROL
             ];
             
-            return chemicalPatterns.some(pattern => pattern.test(word));
+            // Проверяем по паттернам
+            if (chemicalPatterns.some(pattern => pattern.test(word))) {
+                console.log(`✅ Найден ингредиент: ${word}`);
+                return true;
+            }
+            
+            // Проверяем по списку известных ингредиентов
+            const knownIngredients = [
+                'GLYCERIN', 'HYALURONIC', 'NIACINAMIDE', 'RETINOL', 'SALICYLIC',
+                'ALOE', 'CHAMOMILE', 'GREEN', 'TEA', 'VITAMIN', 'C', 'E',
+                'ZINC', 'TITANIUM', 'DIMETHICONE', 'CYCLOMETHICONE',
+                'CETEARYL', 'ALCOHOL', 'PANTHENOL', 'ALLANTOIN',
+                'BISABOLOL', 'CERAMIDE', 'PEPTIDES', 'COENZYME',
+                'SQUALANE', 'JOJOBA', 'SHEA', 'COCONUT', 'ARGAN',
+                'ROSEHIP', 'AVOCADO', 'ALMOND', 'LAVENDER', 'TEA',
+                'TREE', 'PEPPERMINT', 'EUCALYPTUS', 'LEMON', 'ORANGE',
+                'PARFUM', 'FRAGRANCE', 'LINALOOL', 'LIMONENE',
+                'PHENOXYETHANOL', 'CARBOMER', 'XANTHAN', 'GUAR',
+                'STEARIC', 'PALMITIC', 'OLEIC', 'LINOLEIC', 'CITRIC'
+            ];
+            
+            if (knownIngredients.some(ing => word.includes(ing) || ing.includes(word))) {
+                console.log(`✅ Найден известный ингредиент: ${word}`);
+                return true;
+            }
+            
+            return false;
         }
 
         function drawOverlay() {
