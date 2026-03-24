@@ -203,9 +203,11 @@
         <div class="controls">
             <button id="startCamera" class="btn">📷 Включить камеру</button>
             <button id="startScan" class="btn btn-success" style="display: none;">🔍 Начать сканирование</button>
-            <button id="stopScan" class="btn btn-danger" style="display: none;">⏹️ Остановить</button>
-            <button id="sendData" class="btn" style="display: none;">📤 Отправить в бота</button>
-            <button id="reset" class="btn" style="display: none;">🔄 Новое сканирование</button>
+            <button id="stopScan" class="btn btn-danger" style="display: none;">⏹ Остановить</button>
+            <button id="scanBarcode" class="btn btn-primary" style="display: none;">📸 Сканировать штрихкод</button>
+            <button id="sendData" class="btn btn-primary" style="display: none;">📤 Отправить в бота</button>
+            <button id="saveProduct" class="btn btn-success" style="display: none;">💾 Сохранить продукт</button>
+            <button id="reset" class="btn btn-secondary" style="display: none;">🔄 Сброс</button>
         </div>
     </div>
 
@@ -239,22 +241,26 @@
         let startCameraBtn = document.getElementById('startCamera');
         let startScanBtn = document.getElementById('startScan');
         let stopScanBtn = document.getElementById('stopScan');
+        let scanBarcodeBtn = document.getElementById('scanBarcode');
         let sendDataBtn = document.getElementById('sendData');
+        let saveProductBtn = document.getElementById('saveProduct');
         let resetBtn = document.getElementById('reset');
         let statusDiv = document.getElementById('status');
         let ingredientsPanel = document.getElementById('ingredientsPanel');
-        let ingredientsList = document.getElementById('ingredientsList');
 
         // Статистика
+        let ingredientsList = document.getElementById('ingredientsList');
         let wordCountEl = document.getElementById('wordCount');
         let ingredientCountEl = document.getElementById('ingredientCount');
-        let scanCountEl = document.getElementById('scanCount');
 
+        let scanCountEl = document.getElementById('scanCount');
         // Обработчики событий
         startCameraBtn.addEventListener('click', startCamera);
         startScanBtn.addEventListener('click', startScanning);
         stopScanBtn.addEventListener('click', stopScanning);
+        scanBarcodeBtn.addEventListener('click', scanBarcode);
         sendDataBtn.addEventListener('click', sendData);
+        saveProductBtn.addEventListener('click', saveProduct);
         resetBtn.addEventListener('click', resetScanner);
 
         async function startCamera() {
@@ -289,7 +295,8 @@
                     video.play();
                     startCameraBtn.style.display = 'none';
                     startScanBtn.style.display = 'block';
-                    updateStatus('📸 Камера включена. Нажмите "Начать сканирование"', 'found');
+                    scanBarcodeBtn.style.display = 'block';
+                    updateStatus('📸 Камера включена. Выберите действие', 'found');
                 };
                 
             } catch (error) {
@@ -360,6 +367,7 @@
             
             stopScanBtn.style.display = 'none';
             sendDataBtn.style.display = 'block';
+            saveProductBtn.style.display = 'block';
             resetBtn.style.display = 'block';
             
             updateStatus(`✅ Сканирование завершено! Найдено ${ingredients.size} ингредиентов`, 'found');
@@ -417,12 +425,22 @@
         }
 
         function handleWords(words) {
+            const rawIngredients = words.map(w => w.text);
+            const cleanIngredients = cleanIngredients(rawIngredients);
+            
+            console.log(`📝 Оригинальных слов: ${rawIngredients.length}`);
+            console.log(`🧪 Чистых ингредиентов: ${cleanIngredients.length}`);
+            
+            cleanIngredients.forEach(ingredient => {
+                if (!ingredients.has(ingredient)) {
+                    ingredients.add(ingredient);
+                    updateIngredientsList();
+                }
+            });
+            
             words.forEach(word => {
                 const normalizedText = normalizeText(word.text);
-                
-                // Проверяем является ли слово ингредиентом
-                if (isIngredient(normalizedText)) {
-                    // Добавляем в Map если еще нет
+                if (cleanIngredients.includes(normalizedText)) {
                     if (!detectedWords.has(normalizedText)) {
                         detectedWords.set(normalizedText, {
                             text: normalizedText,
@@ -434,11 +452,8 @@
                             firstSeen: Date.now()
                         });
                         
-                        ingredients.add(normalizedText);
-                        updateIngredientsList();
                         updateStats();
                     } else {
-                        // Обновляем время последнего обнаружения
                         const existing = detectedWords.get(normalizedText);
                         if (existing) {
                             existing.lastSeen = Date.now();
@@ -449,13 +464,104 @@
             
             // Отрисовка overlay
             drawOverlay();
+            updateStatus(`✅ Найдено ${ingredients.size} ингредиентов`, 'found');
         }
 
         function normalizeText(text) {
-            return text
-                .toUpperCase()
-                .replace(/[^A-ZА-ЯЁ0-9-]/g, '')
-                .trim();
+            text = text.toUpperCase();
+            
+            // Исправляем OCR ошибки
+            text = text.replace("0", "O");
+            text = text.replace("1", "I");
+            text = text.replace("5", "S");
+            text = text.replace("8", "B");
+            
+            // Убираем все кроме букв и пробелов
+            text = text.replace(/[^A-Z ]/g, '');
+            
+            if (text.length < 4) {
+                return null;
+            }
+            
+            return text.trim();
+        }
+
+        function cleanIngredients(rawList) {
+            const result = new Set();
+            const BAD_WORDS = new Set([
+                "INGREDIENTS", "AQUA", "WATER", "AND", "THE",
+                "WITH", "FOR", "OF", "CONTAINS", "PRODUCT",
+                "ACTIVE", "NATURAL", "ORGANIC", "ML", "OZ", 
+                "G", "KG", "L", "FL", "PERFUME", "FRAGRANCE"
+            ]);
+            
+            for (let word of rawList) {
+                const normalized = normalizeText(word);
+                if (normalized && !BAD_WORDS.has(normalized)) {
+                    result.add(normalized);
+                }
+            }
+            
+            return Array.from(result);
+        }
+
+        function findMatch(word, db) {
+            // Fuzzy matching
+            const matches = getCloseMatches(word, Object.keys(db), 1, 0.8);
+            return matches.length > 0 ? matches[0] : null;
+        }
+
+        function getCloseMatches(word, possibilities, n = 1, cutoff = 0.6) {
+            const matches = [];
+            
+            for (let possibility of possibilities) {
+                const similarity = stringSimilarity(word, possibility);
+                if (similarity >= cutoff) {
+                    matches.push({ word: possibility, similarity });
+                }
+            }
+            
+            matches.sort((a, b) => b.similarity - a.similarity);
+            return matches.slice(0, n).map(m => m.word);
+        }
+
+        function stringSimilarity(str1, str2) {
+            const longer = str1.length > str2.length ? str1 : str2;
+            const shorter = str1.length > str2.length ? str2 : str1;
+            
+            if (longer.length === 0) return 1.0;
+            if (shorter.length === 0) return 0.0;
+            
+            const editDistance = levenshteinDistance(longer, shorter);
+            return (longer.length - editDistance) / longer.length;
+        }
+
+        function levenshteinDistance(str1, str2) {
+            const matrix = [];
+            
+            for (let i = 0; i <= str2.length; i++) {
+                matrix[i] = [i];
+            }
+            
+            for (let j = 0; j <= str1.length; j++) {
+                matrix[0][j] = j;
+            }
+            
+            for (let i = 1; i <= str2.length; i++) {
+                for (let j = 1; j <= str1.length; j++) {
+                    if (str2.charAt(i - 1) === str1.charAt(j - 1)) {
+                        matrix[i][j] = matrix[i - 1][j - 1];
+                    } else {
+                        matrix[i][j] = Math.min(
+                            matrix[i - 1][j - 1] + 1,
+                            matrix[i][j - 1] + 1,
+                            matrix[i - 1][j] + 1
+                        );
+                    }
+                }
+            }
+            
+            return matrix[str2.length][str1.length];
         }
 
         function isIngredient(word) {
@@ -644,6 +750,83 @@
         if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
             updateStatus('❌ Камера не поддерживается', 'error');
             showFileInput();
+        }
+
+        function scanBarcode() {
+            try {
+                updateStatus('📸 Сканирование штрихкода...', 'scanning');
+                
+                // Используем BarcodeReader или QuaggaJS
+                const script = document.createElement('script');
+                script.src = 'https://unpkg.com/@zxing/library@latest/umd/index.min.js';
+                script.onload = () => {
+                    const codeReader = new ZXing.BrowserMultiFormatReader();
+                    
+                    // Захватываем кадр для сканирования
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    ctx.drawImage(video, 0, 0);
+                    
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    
+                    codeReader.decodeFromImageData(imageData)
+                        .then(result => {
+                            console.log('📸 Штрихкод найден:', result.text);
+                            
+                            // Отправляем штрихкод в бота
+                            tg.sendData(JSON.stringify({
+                                type: "barcode",
+                                barcode: result.text
+                            }));
+                            
+                            updateStatus('📸 Штрихкод отправлен', 'found');
+                            
+                            // Закрываем Web App
+                            setTimeout(() => {
+                                tg.close();
+                            }, 1000);
+                        })
+                        .catch(err => {
+                            console.error('❌ Ошибка сканирования штрихкода:', err);
+                            updateStatus('❌ Штрихкод не найден. Попробуйте еще раз', 'error');
+                        });
+                };
+                document.head.appendChild(script);
+                
+            } catch (error) {
+                console.error('❌ Ошибка сканирования штрихкода:', error);
+                updateStatus('❌ Не удалось просканировать штрихкод', 'error');
+            }
+        }
+
+        function saveProduct() {
+            const productName = prompt('Введите название продукта:');
+            if (!productName) return;
+            
+            const productBarcode = prompt('Введите штрихкод (если есть):');
+            
+            try {
+                updateStatus('💾 Сохранение продукта...', 'scanning');
+                
+                // Отправляем данные в бота
+                tg.sendData(JSON.stringify({
+                    type: "ingredients",
+                    barcode: productBarcode || `manual_${Date.now()}`,
+                    name: productName,
+                    ingredients: Array.from(ingredients).join(', ')
+                }));
+                
+                updateStatus('💾 Продукт отправлен', 'found');
+                
+                // Закрываем Web App
+                setTimeout(() => {
+                    tg.close();
+                }, 1000);
+                
+            } catch (error) {
+                console.error('❌ Ошибка сохранения:', error);
+                updateStatus('❌ Не удалось сохранить продукт', 'error');
+            }
         }
     </script>
 </body>
