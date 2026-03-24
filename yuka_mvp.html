@@ -192,7 +192,7 @@
         <div class="camera-container">
             <video id="video" autoplay playsinline></video>
             <canvas id="canvas"></canvas>
-            <div id="overlay"></div>
+            <canvas id="overlay"></canvas>
         </div>
 
         <div class="ingredients-panel" id="ingredientsPanel" style="display: none;">
@@ -226,6 +226,10 @@
         let isScanning = false;
         let scanInterval = null;
         let scanCount = 0;
+
+        // Устанавливаем размеры overlay
+        overlay.width = 400;
+        overlay.height = 300;
 
         // Хранилище найденных слов
         let detectedWords = new Map();
@@ -463,6 +467,8 @@
         }
 
         function drawOverlay() {
+            if (!octx) return;
+            
             octx.clearRect(0, 0, overlay.width, overlay.height);
             
             detectedWords.forEach((word, text) => {
@@ -542,7 +548,9 @@
             }
             
             // Очистка интерфейса
-            octx.clearRect(0, 0, overlay.width, overlay.height);
+            if (octx) {
+                octx.clearRect(0, 0, overlay.width, overlay.height);
+            }
             ingredientsList.innerHTML = '';
             ingredientsPanel.style.display = 'none';
             
