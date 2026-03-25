@@ -362,9 +362,9 @@
             }
         }
 
-        // 🔥 ФИЛЬТР ПРЯМО В JS
+        // 🔥 ФИЛЬТР ПРЯМО В JS (ОСЛАБЛЕННЫЙ)
         function isValid(word) {
-            if (word.length < 5) return false;
+            if (word.length < 4) return false;
 
             const vowels = "AEIOU";
             let v = 0;
@@ -373,7 +373,8 @@
                 if (vowels.includes(c)) v++;
             }
 
-            return v >= 2;
+            // Ослабляем фильтр - достаточно 1 гласная
+            return v >= 1;
         }
 
         // 🔥 НАКОПЛЕНИЕ С ПОВТОРАМИ
@@ -467,10 +468,10 @@
             }
         }
 
-        // 🔥 ОТПРАВКА ТОЛЬКО НАДЁЖНЫХ СЛОВ
+        // 🔥 ОТПРАВКА ТОЛЬКО НАДЁЖНЫХ СЛОВ (ОСЛАБЛЕННЫЙ)
         function sendData() {
             const finalWords = Object.entries(stats)
-                .filter(([w, c]) => c >= 3)
+                .filter(([w, c]) => c >= 2) // порог 2 вместо 3
                 .map(([w]) => w);
             
             if (finalWords.length === 0) {
@@ -506,7 +507,7 @@
         // Обновление списка ингредиентов
         function updateIngredientsList() {
             const finalWords = Object.entries(stats)
-                .filter(([w, c]) => c >= 3)
+                .filter(([w, c]) => c >= 2) // порог 2
                 .map(([w]) => w);
             
             ingredientsList.innerHTML = '';
@@ -528,11 +529,11 @@
             sendBtn.disabled = finalWords.length === 0;
         }
 
-        // 🔥 ИНДИКАТОР КАЧЕСТВА
+        // 🔥 ИНДИКАТОР КАЧЕСТВА (ОСЛАБЛЕННЫЙ)
         function updateQualityIndicator() {
             const totalWords = Object.keys(stats).length;
             const finalWords = Object.entries(stats)
-                .filter(([w, c]) => c >= 3)
+                .filter(([w, c]) => c >= 2) // порог 2
                 .map(([w]) => w);
             
             if (finalWords.length >= 5) {
@@ -550,7 +551,7 @@
         // Обновление статистики
         function updateStats() {
             const finalWords = Object.entries(stats)
-                .filter(([w, c]) => c >= 3)
+                .filter(([w, c]) => c >= 2) // порог 2
                 .map(([w]) => w);
             
             wordCountEl.textContent = Object.keys(stats).length;
@@ -562,12 +563,12 @@
         function updateFrequencyInfo() {
             const totalWords = Object.keys(stats).length;
             const finalWords = Object.entries(stats)
-                .filter(([w, c]) => c >= 3)
+                .filter(([w, c]) => c >= 2) // порог 2
                 .map(([w]) => w);
             
             let info = `📊 Накоплено слов: ${totalWords}<br>`;
             info += `✅ Надёжных: ${finalWords.length}<br>`;
-            info += `🔥 Порог: 3+ сканирований`;
+            info += `🔥 Порог: 2+ сканирований`;
             
             frequencyInfo.innerHTML = info;
         }
@@ -612,7 +613,7 @@
             }
             
             const finalWords = Object.entries(stats)
-                .filter(([w, c]) => c >= 3)
+                .filter(([w, c]) => c >= 2) // порог 2
                 .map(([w]) => w);
             
             if (finalWords.length > 0) {
