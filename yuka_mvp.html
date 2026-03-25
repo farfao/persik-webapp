@@ -426,12 +426,12 @@
 
         function handleWords(words) {
             const rawIngredients = words.map(w => w.text);
-            const cleanIngredients = cleanIngredients(rawIngredients);
+            const cleanIngredientsList = cleanIngredients(rawIngredients);
             
             console.log(`📝 Оригинальных слов: ${rawIngredients.length}`);
-            console.log(`🧪 Чистых ингредиентов: ${cleanIngredients.length}`);
+            console.log(`🧪 Чистых ингредиентов: ${cleanIngredientsList.length}`);
             
-            cleanIngredients.forEach(ingredient => {
+            cleanIngredientsList.forEach(ingredient => {
                 if (!ingredients.has(ingredient)) {
                     ingredients.add(ingredient);
                     updateIngredientsList();
@@ -440,7 +440,7 @@
             
             words.forEach(word => {
                 const normalizedText = normalizeText(word.text);
-                if (cleanIngredients.includes(normalizedText)) {
+                if (cleanIngredientsList.includes(normalizedText)) {
                     if (!detectedWords.has(normalizedText)) {
                         detectedWords.set(normalizedText, {
                             text: normalizedText,
@@ -756,40 +756,54 @@
             try {
                 updateStatus('📸 Сканирование штрихкода...', 'scanning');
                 
-                // Используем BarcodeReader или QuaggaJS
+                // Используем QuaggaJS для сканирования штрихкода
                 const script = document.createElement('script');
-                script.src = 'https://unpkg.com/@zxing/library@latest/umd/index.min.js';
+                script.src = 'https://unpkg.com/quagga@0.12.1/dist/quagga.min.js';
                 script.onload = () => {
-                    const codeReader = new ZXing.BrowserMultiFormatReader();
-                    
-                    // Захватываем кадр для сканирования
-                    canvas.width = video.videoWidth;
-                    canvas.height = video.videoHeight;
-                    ctx.drawImage(video, 0, 0);
-                    
-                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    
-                    codeReader.decodeFromImageData(imageData)
-                        .then(result => {
-                            console.log('📸 Штрихкод найден:', result.text);
-                            
-                            // Отправляем штрихкод в бота
-                            tg.sendData(JSON.stringify({
-                                type: "barcode",
-                                barcode: result.text
-                            }));
-                            
-                            updateStatus('📸 Штрихкод отправлен', 'found');
-                            
-                            // Закрываем Web App
-                            setTimeout(() => {
-                                tg.close();
-                            }, 1000);
-                        })
-                        .catch(err => {
-                            console.error('❌ Ошибка сканирования штрихкода:', err);
+                    Quagga.init({
+                        inputStream: {
+                            name: "Live",
+                            type: "LiveStream",
+                            target: video
+                        },
+                        decoder: {
+                            readers: ["code_128_reader", "ean_reader", "ean_8_reader", "code_39_reader"]
+                        }
+                    }, function(err) {
+                        if (err) {
+                            console.error('❌ Ошибка инициализации Quagga:', err);
+                            updateStatus('❌ Не удалось инициализировать сканер', 'error');
+                            return;
+                        }
+                        
+                        Quagga.start();
+                        
+                        // Останавливаем через 5 секунд
+                        setTimeout(() => {
+                            Quagga.stop();
                             updateStatus('❌ Штрихкод не найден. Попробуйте еще раз', 'error');
-                        });
+                        }, 5000);
+                    });
+                    
+                    Quagga.onDetected(function(result) {
+                        Quagga.stop();
+                        
+                        const barcode = result.codeResult.code;
+                        console.log('📸 Штрихкод найден:', barcode);
+                        
+                        // Отправляем штрихкод в бота
+                        tg.sendData(JSON.stringify({
+                            type: "barcode",
+                            barcode: barcode
+                        }));
+                        
+                        updateStatus('📸 Штрихкод отправлен', 'found');
+                        
+                        // Закрываем Web App
+                        setTimeout(() => {
+                            tg.close();
+                        }, 1000);
+                    });
                 };
                 document.head.appendChild(script);
                 
