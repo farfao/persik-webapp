@@ -204,7 +204,7 @@
             <button id="startCamera" class="btn">📷 Включить камеру</button>
             <button id="startScan" class="btn btn-success" style="display: none;">🔍 Начать сканирование</button>
             <button id="stopScan" class="btn btn-danger" style="display: none;">⏹ Остановить</button>
-            <button id="scanBarcode" class="btn btn-primary" style="display: none;">📸 Сканировать штрихкод</button>
+            <button id="openBarcodeScanner" class="btn btn-primary" style="display: none;">📸 Сканер штрихкода</button>
             <button id="sendData" class="btn btn-primary" style="display: none;">📤 Отправить в бота</button>
             <button id="saveProduct" class="btn btn-success" style="display: none;">💾 Сохранить продукт</button>
             <button id="reset" class="btn btn-secondary" style="display: none;">🔄 Сброс</button>
@@ -241,7 +241,7 @@
         let startCameraBtn = document.getElementById('startCamera');
         let startScanBtn = document.getElementById('startScan');
         let stopScanBtn = document.getElementById('stopScan');
-        let scanBarcodeBtn = document.getElementById('scanBarcode');
+        let openBarcodeScannerBtn = document.getElementById('openBarcodeScanner');
         let sendDataBtn = document.getElementById('sendData');
         let saveProductBtn = document.getElementById('saveProduct');
         let resetBtn = document.getElementById('reset');
@@ -258,7 +258,7 @@
         startCameraBtn.addEventListener('click', startCamera);
         startScanBtn.addEventListener('click', startScanning);
         stopScanBtn.addEventListener('click', stopScanning);
-        scanBarcodeBtn.addEventListener('click', scanBarcode);
+        openBarcodeScannerBtn.addEventListener('click', openBarcodeScanner);
         sendDataBtn.addEventListener('click', sendData);
         saveProductBtn.addEventListener('click', saveProduct);
         resetBtn.addEventListener('click', resetScanner);
@@ -295,7 +295,7 @@
                     video.play();
                     startCameraBtn.style.display = 'none';
                     startScanBtn.style.display = 'block';
-                    scanBarcodeBtn.style.display = 'block';
+                    openBarcodeScannerBtn.style.display = 'block';
                     updateStatus('📸 Камера включена. Выберите действие', 'found');
                 };
                 
@@ -806,6 +806,11 @@
                 console.error('❌ Ошибка сканирования штрихкода:', error);
                 updateStatus('❌ Не удалось просканировать штрихкод', 'error');
             }
+        }
+
+        function openBarcodeScanner() {
+            // Открываем отдельную страницу для сканирования штрихкода
+            window.open('https://farfao.github.io/persik-webapp/simple_barcode.html', '_blank');
         }
 
         function saveProduct() {
