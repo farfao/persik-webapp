@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Сканер штрихкода</title>
+    <script src="https://unpkg.com/@zxing/library@latest/umd/index.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            text-align: center;
+        }
+        #video {
+            width: 100%;
+            max-width: 400px;
+            height: 300px;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h2>📸 Сканер штрихкода</h2>
+    <video id="video" autoplay></video>
+    <br>
+    <button onclick="startScanning()">Начать сканирование</button>
+    <button onclick="stopScanning()">Остановить</button>
+    <div id="result"></div>
+
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand();
+
+        let codeReader = null;
+        let video = document.getElementById('video');
+        let resultDiv = document.getElementById('result');
+
+        async function startCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: "environment" } 
+                });
+                video.srcObject = stream;
+                video.play();
+            } catch (err) {
+                console.error('Ошибка камеры:', err);
+                resultDiv.textContent = '❌ Не удалось получить доступ к камере';
+            }
+        }
+
+        async function startScanning() {
+            if (!codeReader) {
+                codeReader = new ZXing.BrowserMultiFormatReader();
+            }
+
+            try {
+                await startCamera();
+                
+                codeReader.decodeFromVideoDevice(undefined, video, (result, err) => {
+                    if (result) {
+                        const barcode = result.text;
+                        console.log('Штрихкод найден:', barcode);
+                        
+                        resultDiv.innerHTML = `
+                            <strong>✅ Штрихкод найден:</strong><br>
+                            ${barcode}<br><br>
+                            <button onclick="sendBarcode('${barcode}')">📤 Отправить в бота</button>
+                        `;
+                        
+                        stopScanning();
+                    }
+                    
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error('Ошибка сканирования:', err);
+                    }
+                });
+                
+                resultDiv.textContent = '🔍 Наведите камеру на штрихкод...';
+                
+            } catch (err) {
+                console.error('Ошибка:', err);
+                resultDiv.textContent = '❌ Ошибка сканирования';
+            }
+        }
+
+        function stopScanning() {
+            if (codeReader) {
+                codeReader.reset();
+            }
+            
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+                video.srcObject = null;
+            }
+        }
+
+        function sendBarcode(barcode) {
+            tg.sendData(JSON.stringify({
+                type: "barcode",
+                barcode: barcode
+            }));
+            
+            resultDiv.innerHTML = `
+                <strong>📤 Штрихкод отправлен!</strong><br>
+                ${barcode}
+            `;
+            
+            setTimeout(() => {
+                tg.close();
+            }, 1000);
+        }
+
+        // Автоматически запускаем камеру при загрузке
+        window.onload = startCamera;
+    </script>
+</body>
+</html>
