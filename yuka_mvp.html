@@ -391,17 +391,8 @@
                 console.log('🔍 Начинаем OCR...');
                 
                 const result = await Tesseract.recognize(imageData, 'eng+rus', {
-                    logger: (m) => {
-                        if (m.status === 'recognizing text') {
-                            const progress = Math.round(m.progress * 100);
-                            if (progress % 25 === 0) {
-                                console.log(`OCR прогресс: ${progress}%`);
-                                updateStatus(`🔍 Распознавание... ${progress}%`, 'scanning');
-                            }
-                        }
-                    },
-                    tessedit_ocr_engine_mode: '1', // LSTM
-                    tessedit_pageseg_mode: '6', // Sparse text
+                    tessedit_ocr_engine_mode: 1,
+                    tessedit_pageseg_mode: 6,
                     preserve_interword_spaces: '1'
                 });
                 
@@ -475,11 +466,13 @@
             text = text.replace("1", "I");
             text = text.replace("5", "S");
             text = text.replace("8", "B");
+            text = text.replace("2", "Z");
+            text = text.replace("4", "A");
             
             // Убираем все кроме букв и пробелов
             text = text.replace(/[^A-Z ]/g, '');
             
-            if (text.length < 4) {
+            if (text.length < 3) {
                 return null;
             }
             
@@ -492,12 +485,14 @@
                 "INGREDIENTS", "AQUA", "WATER", "AND", "THE",
                 "WITH", "FOR", "OF", "CONTAINS", "PRODUCT",
                 "ACTIVE", "NATURAL", "ORGANIC", "ML", "OZ", 
-                "G", "KG", "L", "FL", "PERFUME", "FRAGRANCE"
+                "G", "KG", "L", "FL", "PERFUME", "FRAGRANCE",
+                "PARFUM", "CETEARYL", "ALCOHOL", "STEARYL", "MYRISTYL",
+                "LAURETH", "LAURYL", "SODIUM", "COCO", "GLUCOSIDE"
             ]);
             
             for (let word of rawList) {
                 const normalized = normalizeText(word);
-                if (normalized && !BAD_WORDS.has(normalized)) {
+                if (normalized && !BAD_WORDS.has(normalized) && normalized.length >= 3) {
                     result.add(normalized);
                 }
             }
@@ -506,12 +501,12 @@
         }
 
         function findMatch(word, db) {
-            // Fuzzy matching
-            const matches = getCloseMatches(word, Object.keys(db), 1, 0.8);
+            // Fuzzy matching с более низким порогом
+            const matches = getCloseMatches(word, Object.keys(db), 3, 0.6);
             return matches.length > 0 ? matches[0] : null;
         }
 
-        function getCloseMatches(word, possibilities, n = 1, cutoff = 0.6) {
+        function getCloseMatches(word, possibilities, n = 3, cutoff = 0.6) {
             const matches = [];
             
             for (let possibility of possibilities) {
