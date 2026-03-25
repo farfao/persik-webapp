@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>📸 Yuka MVP - Сканирование ингредиентов</title>
+    <title>📸 Yuka Pro - Сканирование ингредиентов</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
     <style>
@@ -61,90 +61,86 @@
             z-index: 10;
         }
         .controls {
-            padding: 15px;
-            background: rgba(255,255,255,0.95);
-            position: sticky;
-            bottom: 0;
+            padding: 20px;
+            background: #f8f9fa;
         }
-        .btn {
+        .scan-btn {
             width: 100%;
-            background: #667eea;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
             color: white;
             border: none;
-            padding: 15px;
-            border-radius: 25px;
+            border-radius: 12px;
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            margin: 5px 0;
             transition: all 0.3s ease;
+            margin-bottom: 10px;
         }
-        .btn:hover {
-            background: #5a67d8;
+        .scan-btn:hover {
             transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
         }
-        .btn:disabled {
+        .scan-btn:disabled {
             background: #ccc;
             cursor: not-allowed;
             transform: none;
         }
-        .btn-danger {
-            background: #f56565;
-        }
-        .btn-danger:hover {
-            background: #e53e3e;
-        }
-        .btn-success {
-            background: #48bb78;
-        }
-        .btn-success:hover {
-            background: #38a169;
-        }
-        .ingredients-panel {
-            padding: 15px;
-            max-height: 200px;
-            overflow-y: auto;
-            background: #f7fafc;
-        }
-        .ingredient-tag {
-            display: inline-block;
-            background: #667eea;
+        .send-btn {
+            width: 100%;
+            padding: 12px;
+            background: #28a745;
             color: white;
-            padding: 5px 10px;
-            margin: 2px;
-            border-radius: 15px;
-            font-size: 12px;
-            font-weight: 500;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .send-btn:hover {
+            background: #218838;
+        }
+        .send-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
         }
         .status {
             padding: 10px;
             text-align: center;
             font-size: 14px;
             font-weight: 500;
+            border-radius: 8px;
+            margin-bottom: 15px;
         }
-        .status.scanning {
-            background: #bee3f8;
-            color: #2c5282;
+        .status.scanning { 
+            background: #fff3cd; 
+            color: #856404; 
+            border: 1px solid #ffeaa7;
         }
-        .status.found {
-            background: #c6f6d5;
-            color: #22543d;
+        .status.found { 
+            background: #d4edda; 
+            color: #155724; 
+            border: 1px solid #c3e6cb;
         }
-        .status.error {
-            background: #fed7d7;
-            color: #742a2a;
+        .status.error { 
+            background: #f8d7da; 
+            color: #721c24; 
+            border: 1px solid #f5c6cb;
         }
         .stats {
             display: flex;
             justify-content: space-around;
-            padding: 10px;
-            background: #edf2f7;
-            border-bottom: 1px solid #e2e8f0;
+            padding: 15px;
+            background: white;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         .stat-item {
             text-align: center;
         }
-        .stat-number {
+        .stat-value {
             font-size: 24px;
             font-weight: bold;
             color: #667eea;
@@ -152,314 +148,496 @@
         .stat-label {
             font-size: 12px;
             color: #666;
+            margin-top: 5px;
         }
-        .word-highlight {
-            position: absolute;
-            border: 2px solid #ff6b6b;
-            background: rgba(255, 107, 107, 0.2);
+        .ingredients-section {
+            padding: 20px;
+            background: white;
+        }
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .ingredients-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .ingredient-tag {
+            background: #667eea;
             color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
             font-size: 12px;
-            font-weight: bold;
-            padding: 2px 4px;
-            border-radius: 3px;
+            font-weight: 500;
+        }
+        .frequency-info {
+            font-size: 12px;
+            color: #666;
+            margin-top: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e9ecef;
+            border-radius: 2px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        .quality-indicator {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+        .quality-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .quality-good { background: #28a745; }
+        .quality-medium { background: #ffc107; }
+        .quality-poor { background: #dc3545; }
+        .scan-frame {
+            position: absolute;
+            border: 3px solid #ff4444;
+            width: 80%;
+            height: 30%;
+            top: 35%;
+            left: 10%;
+            box-shadow: 0 0 20px rgba(255, 68, 68, 0.5);
+            animation: pulse 2s infinite;
             pointer-events: none;
-            z-index: 20;
+            z-index: 10;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(255, 68, 68, 0.8); }
+            100% { box-shadow: 0 0 20px rgba(255, 68, 68, 0.5); }
+        }
+        .scan-hint {
+            position: absolute;
+            top: 32%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(255, 68, 68, 0.9);
+            color: white;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 11;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>📸 Yuka MVP</h1>
-            <div class="status" id="status">📷 Включите камеру для сканирования</div>
-        </div>
-
-        <div class="stats">
-            <div class="stat-item">
-                <div class="stat-number" id="wordCount">0</div>
-                <div class="stat-label">Найдено слов</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="ingredientCount">0</div>
-                <div class="stat-label">Ингредиентов</div>
-            </div>
-            <div class="stat-item">
-                <div class="stat-number" id="scanCount">0</div>
-                <div class="stat-label">Сканирований</div>
-            </div>
+            <h1>📸 Yuka Pro</h1>
+            <div style="font-size: 12px; color: #666;">Наведите красную рамку на состав</div>
         </div>
 
         <div class="camera-container">
             <video id="video" autoplay playsinline></video>
-            <canvas id="canvas"></canvas>
+            <canvas id="canvas" style="display: none;"></canvas>
             <canvas id="overlay"></canvas>
-        </div>
-
-        <div class="ingredients-panel" id="ingredientsPanel" style="display: none;">
-            <h3>🧪 Найденные ингредиенты:</h3>
-            <div id="ingredientsList"></div>
+            
+            <!-- 🔥 РАМКА ДЛЯ НАВЕДЕНИЯ -->
+            <div class="scan-frame"></div>
+            <div class="scan-hint">📷 Наведите на состав</div>
         </div>
 
         <div class="controls">
-            <button id="startCamera" class="btn">📷 Включить камеру</button>
-            <button id="startScan" class="btn btn-success" style="display: none;">🔍 Начать сканирование</button>
-            <button id="stopScan" class="btn btn-danger" style="display: none;">⏹ Остановить</button>
-            <button id="openBarcodeScanner" class="btn btn-primary" style="display: none;">📸 Сканер штрихкода</button>
-            <button id="sendData" class="btn btn-primary" style="display: none;">📤 Отправить в бота</button>
-            <button id="saveProduct" class="btn btn-success" style="display: none;">💾 Сохранить продукт</button>
-            <button id="reset" class="btn btn-secondary" style="display: none;">🔄 Сброс</button>
+            <div id="status" class="status">📷 Камера готова</div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <div id="scanCount" class="stat-value">0</div>
+                    <div class="stat-label">Сканирований</div>
+                </div>
+                <div class="stat-item">
+                    <div id="wordCount" class="stat-value">0</div>
+                    <div class="stat-label">Слов найдено</div>
+                </div>
+                <div class="stat-item">
+                    <div id="ingredientCount" class="stat-value">0</div>
+                    <div class="stat-label">Ингредиентов</div>
+                </div>
+            </div>
+
+            <div class="quality-indicator">
+                <div id="qualityDot" class="quality-dot quality-poor"></div>
+                <span id="qualityText">Качество: Плохое</span>
+            </div>
+
+            <div class="progress-bar">
+                <div id="progressFill" class="progress-fill"></div>
+            </div>
+
+            <button id="scanBtn" class="scan-btn">🔍 Начать сканирование</button>
+            <button id="sendBtn" class="send-btn" disabled>📤 Отправить в бота</button>
+        </div>
+
+        <div class="ingredients-section">
+            <div class="section-title">🧪 Найденные ингредиенты</div>
+            <div id="ingredientsList" class="ingredients-list"></div>
+            <div id="frequencyInfo" class="frequency-info">
+                💡 Сканируйте 3-5 секунд для накопления данных
+            </div>
         </div>
     </div>
 
     <script>
         // Инициализация Telegram Web App
         const tg = window.Telegram.WebApp;
-        tg.ready();
         tg.expand();
-        tg.setHeaderColor('#667eea');
+        tg.ready();
 
         // Переменные
         let video = document.getElementById('video');
         let canvas = document.getElementById('canvas');
-        let overlay = document.getElementById('overlay');
         let ctx = canvas.getContext('2d');
+        let overlay = document.getElementById('overlay');
         let octx = overlay.getContext('2d');
-        let stream = null;
-        let isScanning = false;
-        let scanInterval = null;
-        let scanCount = 0;
-
-        // Устанавливаем размеры overlay
-        overlay.width = 400;
-        overlay.height = 300;
-
-        // Хранилище найденных слов
-        let detectedWords = new Map();
-        let ingredients = new Set();
-
-        // Элементы управления
-        let startCameraBtn = document.getElementById('startCamera');
-        let startScanBtn = document.getElementById('startScan');
-        let stopScanBtn = document.getElementById('stopScan');
-        let openBarcodeScannerBtn = document.getElementById('openBarcodeScanner');
-        let sendDataBtn = document.getElementById('sendData');
-        let saveProductBtn = document.getElementById('saveProduct');
-        let resetBtn = document.getElementById('reset');
-        let statusDiv = document.getElementById('status');
-        let ingredientsPanel = document.getElementById('ingredientsPanel');
-
-        // Статистика
+        
+        let scanBtn = document.getElementById('scanBtn');
+        let sendBtn = document.getElementById('sendBtn');
+        let status = document.getElementById('status');
         let ingredientsList = document.getElementById('ingredientsList');
+        let frequencyInfo = document.getElementById('frequencyInfo');
+        let qualityDot = document.getElementById('qualityDot');
+        let qualityText = document.getElementById('qualityText');
+        
         let wordCountEl = document.getElementById('wordCount');
         let ingredientCountEl = document.getElementById('ingredientCount');
-
         let scanCountEl = document.getElementById('scanCount');
-        // Обработчики событий
-        startCameraBtn.addEventListener('click', startCamera);
-        startScanBtn.addEventListener('click', startScanning);
-        stopScanBtn.addEventListener('click', stopScanning);
-        openBarcodeScannerBtn.addEventListener('click', openBarcodeScanner);
-        sendDataBtn.addEventListener('click', sendData);
-        saveProductBtn.addEventListener('click', saveProduct);
-        resetBtn.addEventListener('click', resetScanner);
+        let progressFill = document.getElementById('progressFill');
 
-        async function startCamera() {
+        // 🔥 НАКОПЛЕНИЕ С ПОВТОРАМИ
+        let stats = {};
+        let scanCount = 0;
+        let isScanning = false;
+        let scanInterval = null;
+        let totalScans = 0;
+
+        // Инициализация камеры
+        async function initCamera() {
             try {
-                updateStatus('📷 Включение камеры...', 'scanning');
-                
-                // Проверяем поддержку
-                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                    throw new Error('Камера не поддерживается');
-                }
-                
-                // Запрашиваем права на камеру
-                const constraints = {
-                    video: {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { 
                         facingMode: 'environment',
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
-                    },
-                    audio: false
-                };
-                
-                stream = await navigator.mediaDevices.getUserMedia(constraints);
-                
-                if (!stream) {
-                    throw new Error('Не удалось получить доступ к камере');
-                }
+                    }
+                });
                 
                 video.srcObject = stream;
                 
-                // Ждем загрузки видео
                 video.onloadedmetadata = () => {
-                    video.play();
-                    startCameraBtn.style.display = 'none';
-                    startScanBtn.style.display = 'block';
-                    openBarcodeScannerBtn.style.display = 'block';
-                    updateStatus('📸 Камера включена. Выберите действие', 'found');
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    overlay.width = video.videoWidth;
+                    overlay.height = video.videoHeight;
                 };
                 
+                updateStatus('📷 Камера готова', 'found');
+                
             } catch (error) {
-                console.error('Ошибка камеры:', error);
-                
-                if (error.name === 'NotAllowedError') {
-                    updateStatus('❌ Доступ к камере запрещен. Разрешите в настройках браузера', 'error');
-                } else if (error.name === 'NotFoundError') {
-                    updateStatus('❌ Камера не найдена', 'error');
-                } else if (error.name === 'NotSupportedError') {
-                    updateStatus('❌ Камера не поддерживается', 'error');
-                } else {
-                    updateStatus('❌ Ошибка камеры: ' + error.message, 'error');
-                }
-                
-                // Показываем альтернативу
-                showFileInput();
+                console.error('❌ Ошибка камеры:', error);
+                updateStatus('❌ Не удалось получить доступ к камере', 'error');
             }
         }
 
-        function showFileInput() {
-            const input = document.createElement('input');
-            input.type = 'file';
-            input.accept = 'image/*';
-            input.onchange = (e) => {
-                const file = e.target.files[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        const img = new Image();
-                        img.onload = () => {
-                            canvas.width = img.width;
-                            canvas.height = img.height;
-                            ctx.drawImage(img, 0, 0);
-                            
-                            startCameraBtn.style.display = 'none';
-                            startScanBtn.style.display = 'block';
-                            
-                            updateStatus('📷 Фото загружено. Нажмите "Начать сканирование"', 'found');
-                        };
-                        img.src = event.target.result;
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-            input.click();
+        // 🔥 ФИЛЬТР ПРЯМО В JS
+        function isValid(word) {
+            if (word.length < 5) return false;
+
+            const vowels = "AEIOU";
+            let v = 0;
+
+            for (let c of word) {
+                if (vowels.includes(c)) v++;
+            }
+
+            return v >= 2;
         }
 
-        function startScanning() {
-            if (isScanning) return;
+        // 🔥 НАКОПЛЕНИЕ С ПОВТОРАМИ
+        function collect(words) {
+            words.forEach(w => {
+                const t = w.text.toUpperCase().replace(/[^A-Z]/g, "");
+
+                if (!isValid(t)) return;
+
+                stats[t] = (stats[t] || 0) + 1;
+            });
             
-            isScanning = true;
-            startScanBtn.style.display = 'none';
-            stopScanBtn.style.display = 'block';
-            ingredientsPanel.style.display = 'block';
-            
-            updateStatus('🔍 Сканирование...', 'scanning');
-            
-            // Начинаем сканирование каждые 3000мс (увеличили для стабильности)
-            scanInterval = setInterval(scanFrame, 3000);
+            updateStats();
+            updateFrequencyInfo();
+            updateQualityIndicator();
         }
 
-        function stopScanning() {
-            if (!isScanning) return;
+        // 🔥 СКАНИРУЙ ТОЛЬКО ОБЛАСТЬ СОСТАВА (ИСПРАВЛЕНО)
+        function captureFrame() {
+            // Устанавливаем размер canvas равным области обрезки
+            const cropWidth = video.videoWidth * 0.8;
+            const cropHeight = video.videoHeight * 0.3;
             
-            isScanning = false;
-            clearInterval(scanInterval);
+            canvas.width = cropWidth;
+            canvas.height = cropHeight;
             
-            stopScanBtn.style.display = 'none';
-            sendDataBtn.style.display = 'block';
-            saveProductBtn.style.display = 'block';
-            resetBtn.style.display = 'block';
+            const x = (video.videoWidth - cropWidth) / 2;
+            const y = (video.videoHeight - cropHeight) / 2;
             
-            updateStatus(`✅ Сканирование завершено! Найдено ${ingredients.size} ингредиентов`, 'found');
+            // 🔥 УВЕЛИЧЬ КОНТРАСТ (КРИТИЧНО)
+            ctx.filter = "contrast(200%) brightness(150%) grayscale(100%)";
+            
+            // Обрезаем и масштабируем
+            ctx.drawImage(
+                video, 
+                x, y, cropWidth, cropHeight,  // исходная область
+                0, 0, cropWidth, cropHeight  // в canvas без масштабирования
+            );
+            
+            // 🔥 ПОКАЗЫВАЕМ ЧТО СКАНИРУЕТСЯ (для отладки)
+            if (scanCount === 1) {
+                console.log('📸 Сканирую область:', {
+                    cropWidth, cropHeight, x, y,
+                    canvasSize: `${canvas.width}x${canvas.height}`
+                });
+            }
+            
+            return canvas.toDataURL('image/jpeg', 0.8);
         }
 
-        async function scanFrame() {
+        // 🔥 СКАНИРУЙ РЕЖЕ, НО КАЧЕСТВЕННЕЕ
+        async function performScan() {
             if (!isScanning) return;
             
             try {
-                // Захватываем кадр
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
-                ctx.drawImage(video, 0, 0);
+                const imageData = captureFrame();
+                
+                // 🔥 ПОКАЗЫВАЕМ PREVIEW (для отладки)
+                if (scanCount === 1) {
+                    console.log('📸 Отправляю на OCR изображение:', imageData.substring(0, 100) + '...');
+                }
+                
+                const result = await Tesseract.recognize(
+                    imageData,
+                    'eng',
+                    {
+                        logger: m => {
+                            if (m.status === 'recognizing text') {
+                                const progress = Math.round(m.progress * 100);
+                                updateStatus(`🔍 Распознавание... ${progress}%`, 'scanning');
+                            }
+                        }
+                    }
+                );
+                
+                console.log('📝 Найдено слов:', result.data.words.length);
+                console.log('📝 Текст:', result.data.text.substring(0, 200) + '...');
+                
+                // 🔥 НАКОПЛЯЕМ СЛОВА
+                if (result.data.words && result.data.words.length > 0) {
+                    collect(result.data.words);
+                    updateIngredientsList();
+                }
                 
                 scanCount++;
                 updateStats();
                 
-                // OCR распознавание с улучшенными параметрами
-                const imageData = canvas.toDataURL('image/jpeg', 0.8);
-                
-                console.log('🔍 Начинаем OCR...');
-                
-                const result = await Tesseract.recognize(imageData, 'eng+rus', {
-                    tessedit_ocr_engine_mode: 1,
-                    tessedit_pageseg_mode: 6,
-                    preserve_interword_spaces: '1'
-                });
-                
-                console.log('📝 Результат OCR:', result.data.text);
-                console.log('📝 Найдено слов:', result.data.words.length);
-                
-                // Обрабатываем распознанные слова
-                if (result.data.words && result.data.words.length > 0) {
-                    handleWords(result.data.words);
-                } else {
-                    console.log('⚠️ Слова не найдены');
-                }
-                
             } catch (error) {
                 console.error('❌ Ошибка сканирования:', error);
                 updateStatus('❌ Ошибка распознавания', 'error');
-                
-                // Останавливаем сканирование при ошибке
-                stopScanning();
             }
         }
 
-        function handleWords(words) {
-            const rawIngredients = words.map(w => w.text);
-            const cleanIngredientsList = cleanIngredients(rawIngredients);
+        // 🔥 ОТПРАВКА ТОЛЬКО НАДЁЖНЫХ СЛОВ
+        function sendData() {
+            const finalWords = Object.entries(stats)
+                .filter(([w, c]) => c >= 3)
+                .map(([w]) => w);
             
-            console.log(`📝 Оригинальных слов: ${rawIngredients.length}`);
-            console.log(`🧪 Чистых ингредиентов: ${cleanIngredientsList.length}`);
+            if (finalWords.length === 0) {
+                updateStatus('❌ Нет надёжных ингредиентов', 'error');
+                return;
+            }
             
-            cleanIngredientsList.forEach(ingredient => {
-                if (!ingredients.has(ingredient)) {
-                    ingredients.add(ingredient);
-                    updateIngredientsList();
-                }
-            });
-            
-            words.forEach(word => {
-                const normalizedText = normalizeText(word.text);
-                if (cleanIngredientsList.includes(normalizedText)) {
-                    if (!detectedWords.has(normalizedText)) {
-                        detectedWords.set(normalizedText, {
-                            text: normalizedText,
-                            x: word.bbox.x0,
-                            y: word.bbox.y0,
-                            w: word.bbox.x1 - word.bbox.x0,
-                            h: word.bbox.y1 - word.bbox.y0,
-                            confidence: word.confidence,
-                            firstSeen: Date.now()
-                        });
-                        
-                        updateStats();
-                    } else {
-                        const existing = detectedWords.get(normalizedText);
-                        if (existing) {
-                            existing.lastSeen = Date.now();
-                        }
-                    }
-                }
-            });
-            
-            // Отрисовка overlay
-            drawOverlay();
-            updateStatus(`✅ Найдено ${ingredients.size} ингредиентов`, 'found');
+            try {
+                const data = {
+                    action: 'scan_ingredients',
+                    ingredients: finalWords.join(', '),
+                    scan_count: scanCount,
+                    words_found: Object.keys(stats).length,
+                    timestamp: new Date().toISOString()
+                };
+                
+                console.log('📤 Отправка данных:', data);
+                
+                tg.sendData(JSON.stringify(data));
+                
+                updateStatus('📤 Данные отправлены в бота!', 'found');
+                
+                setTimeout(() => {
+                    tg.close();
+                }, 2000);
+                
+            } catch (error) {
+                console.error('❌ Ошибка отправки:', error);
+                updateStatus('❌ Ошибка отправки данных', 'error');
+            }
         }
 
-        function normalizeText(text) {
-            text = text.toUpperCase();
+        // Обновление списка ингредиентов
+        function updateIngredientsList() {
+            const finalWords = Object.entries(stats)
+                .filter(([w, c]) => c >= 3)
+                .map(([w]) => w);
+            
+            ingredientsList.innerHTML = '';
+            
+            finalWords.sort().forEach(word => {
+                const count = stats[word];
+                const tag = document.createElement('span');
+                tag.className = 'ingredient-tag';
+                tag.textContent = `${word} (${count})`;
+                tag.style.background = count > 5 ? '#28a745' : '#667eea';
+                ingredientsList.appendChild(tag);
+            });
+            
+            // Обновляем прогресс
+            const progress = Math.min(100, (finalWords.length / 10) * 100);
+            progressFill.style.width = progress + '%';
+            
+            // Активируем кнопку отправки
+            sendBtn.disabled = finalWords.length === 0;
+        }
+
+        // 🔥 ИНДИКАТОР КАЧЕСТВА
+        function updateQualityIndicator() {
+            const totalWords = Object.keys(stats).length;
+            const finalWords = Object.entries(stats)
+                .filter(([w, c]) => c >= 3)
+                .map(([w]) => w);
+            
+            if (finalWords.length >= 5) {
+                qualityDot.className = 'quality-dot quality-good';
+                qualityText.textContent = 'Качество: Отличное';
+            } else if (finalWords.length >= 2) {
+                qualityDot.className = 'quality-dot quality-medium';
+                qualityText.textContent = 'Качество: Хорошее';
+            } else {
+                qualityDot.className = 'quality-dot quality-poor';
+                qualityText.textContent = 'Качество: Плохое';
+            }
+        }
+
+        // Обновление статистики
+        function updateStats() {
+            const finalWords = Object.entries(stats)
+                .filter(([w, c]) => c >= 3)
+                .map(([w]) => w);
+            
+            wordCountEl.textContent = Object.keys(stats).length;
+            ingredientCountEl.textContent = finalWords.length;
+            scanCountEl.textContent = scanCount;
+        }
+
+        // Обновление частоты
+        function updateFrequencyInfo() {
+            const totalWords = Object.keys(stats).length;
+            const finalWords = Object.entries(stats)
+                .filter(([w, c]) => c >= 3)
+                .map(([w]) => w);
+            
+            let info = `📊 Накоплено слов: ${totalWords}<br>`;
+            info += `✅ Надёжных: ${finalWords.length}<br>`;
+            info += `🔥 Порог: 3+ сканирований`;
+            
+            frequencyInfo.innerHTML = info;
+        }
+
+        // Обновление статуса
+        function updateStatus(text, type = '') {
+            status.textContent = text;
+            status.className = `status ${type}`;
+        }
+
+        // Начать сканирование
+        function startScanning() {
+            if (isScanning) return;
+            
+            isScanning = true;
+            scanBtn.textContent = '⏹️ Остановить сканирование';
+            scanBtn.style.background = '#dc3545';
+            
+            // Скрываем подсказку
+            document.querySelector('.scan-hint').style.display = 'none';
+            
+            updateStatus('🔍 Сканирование...', 'scanning');
+            
+            // 🔥 СКАНИРУЙ РЕЖЕ, НО КАЧЕСТВЕННЕЕ
+            scanInterval = setInterval(() => {
+                totalScans++;
+                performScan();
+            }, 1500); // было 800
+        }
+
+        // Остановить сканирование
+        function stopScanning() {
+            if (!isScanning) return;
+            
+            isScanning = false;
+            scanBtn.textContent = '🔍 Начать сканирование';
+            scanBtn.style.background = 'linear-gradient(135deg, #667eea, #764ba2)';
+            
+            if (scanInterval) {
+                clearInterval(scanInterval);
+                scanInterval = null;
+            }
+            
+            const finalWords = Object.entries(stats)
+                .filter(([w, c]) => c >= 3)
+                .map(([w]) => w);
+            
+            if (finalWords.length > 0) {
+                updateStatus(`✅ Найдено ${finalWords.length} ингредиентов`, 'found');
+            } else {
+                updateStatus('⚠️ Ингредиенты не найдены. Попробуйте ещё раз.', 'error');
+            }
+        }
+
+        // Обработчики событий
+        scanBtn.addEventListener('click', () => {
+            if (isScanning) {
+                stopScanning();
+            } else {
+                startScanning();
+            }
+        });
+
+        sendBtn.addEventListener('click', sendData);
+
+        // Инициализация
+        initCamera();
+    </script>
+</body>
+</html>
             
             // Исправляем OCR ошибки
             text = text.replace("0", "O");
