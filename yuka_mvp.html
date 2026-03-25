@@ -289,6 +289,7 @@
             </div>
 
             <button id="scanBtn" class="scan-btn">🔍 Начать сканирование</button>
+            <button id="manualBtn" class="scan-btn" style="background: #17a2b8; margin-top: 10px;">✏️ Ввести вручную</button>
             <button id="sendBtn" class="send-btn" disabled>📤 Отправить в бота</button>
         </div>
 
@@ -315,6 +316,7 @@
         let octx = overlay.getContext('2d');
         
         let scanBtn = document.getElementById('scanBtn');
+        let manualBtn = document.getElementById('manualBtn');
         let sendBtn = document.getElementById('sendBtn');
         let status = document.getElementById('status');
         let ingredientsList = document.getElementById('ingredientsList');
@@ -362,26 +364,53 @@
             }
         }
 
-        // 🔥 ФИЛЬТР ПРЯМО В JS (ОСЛАБЛЕННЫЙ)
+        // 🔥 УМНЫЙ ФИЛЬТР ПО СТИЛЮ YUKA
         function isValid(word) {
-            if (word.length < 4) return false;
+            if (word.length < 3) return false;
 
+            // Yuka-style фильтр - пропускаем известные косметические термины
+            const cosmeticTerms = [
+                'GLYCERIN', 'WATER', 'AQUA', 'DIMETHICONE', 'ALCOHOL', 'FRAGRANCE',
+                'PARFUM', 'SODIUM', 'POTASSIUM', 'MAGNESIUM', 'CALCIUM', 'ZINC',
+                'CITRIC', 'ACID', 'HYDROXIDE', 'CHLORIDE', 'SULFATE', 'PALMITATE',
+                'STEARATE', 'MYRISTATE', 'OLEATE', 'LINOLEATE', 'TOCOPHEROL', 'RETINOL',
+                'NIACINAMIDE', 'HYALURONIC', 'CERAMIDE', 'PEPTIDE', 'PROTEIN', 'EXTRACT'
+            ];
+            
+            const upperWord = word.toUpperCase();
+            
+            // Проверяем на косметические термины
+            if (cosmeticTerms.some(term => upperWord.includes(term))) {
+                return true;
+            }
+            
+            // Химические формулы (C12-15, COCO, etc.)
+            if (/^[A-Z]{2,}\d+$/.test(upperWord)) return true;
+            if (/^[A-Z]+\d+[A-Z]+$/.test(upperWord)) return true;
+            
+            // Стандартная проверка на гласные
             const vowels = "AEIOU";
             let v = 0;
-
-            for (let c of word) {
+            for (let c of upperWord) {
                 if (vowels.includes(c)) v++;
             }
-
-            // Ослабляем фильтр - достаточно 1 гласная
+            
             return v >= 1;
         }
 
-        // 🔥 НАКОПЛЕНИЕ С ПОВТОРАМИ
+        // 🔥 НАКОПЛЕНИЕ С ПОВТОРАМИ + YUKA STYLE
         function collect(words) {
             words.forEach(w => {
-                const t = w.text.toUpperCase().replace(/[^A-Z]/g, "");
-
+                let t = w.text.toUpperCase().replace(/[^A-Z]/g, "");
+                
+                // Yuka-style коррекция OCR ошибок
+                t = t.replace(/0/g, 'O');
+                t = t.replace(/1/g, 'I');
+                t = t.replace(/5/g, 'S');
+                t = t.replace(/8/g, 'B');
+                t = t.replace(/2/g, 'Z');
+                t = t.replace(/4/g, 'A');
+                
                 if (!isValid(t)) return;
 
                 stats[t] = (stats[t] || 0) + 1;
@@ -466,6 +495,34 @@
                 console.error('❌ Ошибка сканирования:', error);
                 updateStatus('❌ Ошибка распознавания', 'error');
             }
+        }
+
+        // 🔥 РУЧНОЙ ВВОД (YUKA STYLE)
+        function manualInput() {
+            const input = prompt('Введите ингредиенты через запятую:\n\nПример: GLYCERIN, WATER, DIMETHICONE, TOCOPHEROL');
+            
+            if (!input || input.trim() === '') return;
+            
+            const ingredients = input.split(',')
+                .map(i => i.trim().toUpperCase().replace(/[^A-Z]/g, ''))
+                .filter(i => i.length >= 3);
+            
+            if (ingredients.length === 0) {
+                updateStatus('❌ Некорректный ввод', 'error');
+                return;
+            }
+            
+            // Добавляем в статистику
+            ingredients.forEach(ing => {
+                stats[ing] = (stats[ing] || 0) + 5; // высокий приоритет для ручного ввода
+            });
+            
+            updateStats();
+            updateIngredientsList();
+            updateFrequencyInfo();
+            updateQualityIndicator();
+            
+            updateStatus(`✅ Добавлено ${ingredients.length} ингредиентов вручную`, 'found');
         }
 
         // 🔥 ОТПРАВКА ТОЛЬКО НАДЁЖНЫХ СЛОВ (ОСЛАБЛЕННЫЙ)
@@ -632,6 +689,7 @@
             }
         });
 
+        manualBtn.addEventListener('click', manualInput);
         sendBtn.addEventListener('click', sendData);
 
         // Инициализация
